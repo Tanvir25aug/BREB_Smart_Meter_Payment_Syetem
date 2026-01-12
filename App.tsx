@@ -7,9 +7,12 @@ import AmountEntry from './screens/AmountEntry';
 import PinEntry from './screens/PinEntry';
 import BillSummary from './screens/BillSummary';
 import PaymentSuccess from './screens/PaymentSuccess';
+import Loading from './screens/Loading';
 
 const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>(Screen.HOME);
+  const [loadingMessage, setLoadingMessage] = useState('');
+  const [nextScreenAfterLoading, setNextScreenAfterLoading] = useState<Screen | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [transaction, setTransaction] = useState<TransactionData>({
     biller: null,
@@ -28,7 +31,23 @@ const App: React.FC = () => {
     }
   }, [isDarkMode]);
 
+  useEffect(() => {
+    if (currentScreen === Screen.LOADING && nextScreenAfterLoading) {
+      const timer = setTimeout(() => {
+        setCurrentScreen(nextScreenAfterLoading);
+        setNextScreenAfterLoading(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [currentScreen, nextScreenAfterLoading]);
+
   const toggleDarkMode = () => setIsDarkMode(prev => !prev);
+
+  const startLoading = (message: string, next: Screen) => {
+    setLoadingMessage(message);
+    setNextScreenAfterLoading(next);
+    setCurrentScreen(Screen.LOADING);
+  };
 
   const handleSelectBiller = (biller: Biller) => {
     setTransaction(prev => ({ ...prev, biller }));
@@ -43,11 +62,11 @@ const App: React.FC = () => {
       case Screen.AMOUNT_ENTRY:
         setCurrentScreen(Screen.CUSTOMER_DETAILS);
         break;
-      case Screen.PIN_ENTRY:
+      case Screen.SUMMARY:
         setCurrentScreen(Screen.AMOUNT_ENTRY);
         break;
-      case Screen.SUMMARY:
-        setCurrentScreen(Screen.PIN_ENTRY);
+      case Screen.PIN_ENTRY:
+        setCurrentScreen(Screen.SUMMARY);
         break;
       case Screen.SUCCESS:
         setCurrentScreen(Screen.HOME);
@@ -59,6 +78,8 @@ const App: React.FC = () => {
 
   const renderScreen = () => {
     switch (currentScreen) {
+      case Screen.LOADING:
+        return <Loading message={loadingMessage} />;
       case Screen.HOME:
         return <Home onSelectBiller={handleSelectBiller} onToggleDarkMode={toggleDarkMode} />;
       case Screen.CUSTOMER_DETAILS:
@@ -79,8 +100,16 @@ const App: React.FC = () => {
             onBack={handleBack}
             onNext={(amount) => {
               setTransaction(prev => ({ ...prev, amount }));
-              setCurrentScreen(Screen.PIN_ENTRY);
+              startLoading("Validating Customer Info", Screen.SUMMARY);
             }}
+          />
+        );
+      case Screen.SUMMARY:
+        return (
+          <BillSummary
+            transaction={transaction}
+            onBack={handleBack}
+            onConfirm={() => setCurrentScreen(Screen.PIN_ENTRY)}
           />
         );
       case Screen.PIN_ENTRY:
@@ -89,15 +118,7 @@ const App: React.FC = () => {
             biller={transaction.biller!}
             amount={transaction.amount}
             onBack={handleBack}
-            onNext={() => setCurrentScreen(Screen.SUMMARY)}
-          />
-        );
-      case Screen.SUMMARY:
-        return (
-          <BillSummary
-            transaction={transaction}
-            onBack={handleBack}
-            onConfirm={() => {
+            onNext={() => {
               const txId = 'BP' + Math.random().toString().slice(2, 10).toUpperCase();
               const date = new Date().toLocaleString('en-GB', {
                 day: '2-digit',
@@ -107,7 +128,7 @@ const App: React.FC = () => {
                 minute: '2-digit',
               });
               setTransaction(prev => ({ ...prev, transactionId: txId, date }));
-              setCurrentScreen(Screen.SUCCESS);
+              startLoading("Processing Payment", Screen.SUCCESS);
             }}
           />
         );
@@ -125,7 +146,6 @@ const App: React.FC = () => {
 
   return (
     <div className="max-w-md mx-auto min-h-screen relative flex flex-col transition-colors duration-300">
-      {/* Status Bar (Mock) */}
       <div className="h-11 w-full bg-primary flex items-center justify-between px-6 text-white text-xs font-semibold shrink-0">
         <span>9:41</span>
         <div className="flex items-center space-x-1.5">
@@ -139,8 +159,7 @@ const App: React.FC = () => {
         {renderScreen()}
       </div>
 
-      {/* Dark Mode Floating Action Button (Only on main screens) */}
-      {(currentScreen === Screen.HOME || currentScreen === Screen.AMOUNT_ENTRY || currentScreen === Screen.CUSTOMER_DETAILS) && (
+      {(currentScreen === Screen.HOME || currentScreen === Screen.AMOUNT_ENTRY || currentScreen === Screen.CUSTOMER_DETAILS || currentScreen === Screen.PIN_ENTRY || currentScreen === Screen.SUMMARY) && (
         <button 
           onClick={toggleDarkMode}
           className="fixed bottom-28 right-6 w-12 h-12 bg-white dark:bg-slate-800 rounded-full shadow-2xl flex items-center justify-center text-slate-600 dark:text-yellow-400 z-[60] border border-slate-200 dark:border-slate-700 active:scale-90 transition-transform"

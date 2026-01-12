@@ -79,19 +79,32 @@ const Home: React.FC<HomeProps> = ({ onSelectBiller, onToggleDarkMode }) => {
             <button className="text-xs font-semibold text-primary">View All</button>
           </div>
           <div className="space-y-2">
-            {RECENT_BILLERS.map((biller) => (
-              <button
-                key={biller.id}
-                onClick={() => onSelectBiller(biller)}
-                className="w-full bg-white dark:bg-slate-800 p-4 rounded-2xl flex items-center shadow-sm border border-slate-100 dark:border-slate-700 active:bg-slate-50 dark:active:bg-slate-700 transition-colors text-left"
-              >
-                <div className="flex-1">
-                  <h4 className="font-semibold text-slate-800 dark:text-slate-100">{biller.name}</h4>
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium uppercase tracking-tight">{biller.category}</p>
-                </div>
-                <span className="material-icons-round text-slate-300">chevron_right</span>
-              </button>
-            ))}
+            {RECENT_BILLERS.map((biller) => {
+              const isClickable = biller.name === 'Palli Bidyut (Smart Meter)';
+              return (
+                <button
+                  key={biller.id}
+                  onClick={() => isClickable && onSelectBiller(biller)}
+                  disabled={!isClickable}
+                  className={`w-full bg-white dark:bg-slate-800 p-4 rounded-2xl flex items-center shadow-sm border border-slate-100 dark:border-slate-700 transition-colors text-left ${
+                    isClickable 
+                      ? 'active:bg-slate-50 dark:active:bg-slate-700 cursor-pointer' 
+                      : 'opacity-50 grayscale cursor-not-allowed shadow-none'
+                  }`}
+                >
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-slate-800 dark:text-slate-100">{biller.name}</h4>
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium uppercase tracking-tight">{biller.category}</p>
+                  </div>
+                  {isClickable && (
+                    <span className="material-icons-round text-slate-300">chevron_right</span>
+                  )}
+                  {!isClickable && (
+                    <span className="material-icons-round text-slate-300 opacity-30 text-sm">lock</span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </section>
       </main>

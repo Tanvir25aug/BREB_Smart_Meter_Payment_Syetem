@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Biller } from '../types';
 
 interface PinEntryProps {
@@ -11,6 +11,9 @@ interface PinEntryProps {
 
 const PinEntry: React.FC<PinEntryProps> = ({ biller, amount, onBack, onNext }) => {
   const [pin, setPin] = useState<string[]>([]);
+  const [progress, setProgress] = useState(0);
+  const [isHolding, setIsHolding] = useState(false);
+  const intervalRef = useRef<number | null>(null);
   const MAX_PIN = 5;
 
   const handleKeyPress = (val: string) => {
@@ -23,11 +26,28 @@ const PinEntry: React.FC<PinEntryProps> = ({ biller, amount, onBack, onNext }) =
     }
   };
 
-  const handleConfirm = () => {
-    if (pin.length === MAX_PIN) {
-      onNext();
+  const isPinComplete = pin.length === MAX_PIN;
+
+  useEffect(() => {
+    if (isPinComplete && isHolding) {
+      intervalRef.current = window.setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(intervalRef.current!);
+            onNext();
+            return 100;
+          }
+          return prev + 5;
+        });
+      }, 50);
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      setProgress(0);
     }
-  };
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [isHolding, isPinComplete, onNext]);
 
   return (
     <div className="flex flex-col flex-1 bg-white dark:bg-background-dark min-h-screen">
@@ -41,7 +61,7 @@ const PinEntry: React.FC<PinEntryProps> = ({ biller, amount, onBack, onNext }) =
       </header>
 
       <main className="flex-1 flex flex-col px-6 pt-10 pb-12">
-        <div className="mb-10 bg-slate-50 dark:bg-slate-800 p-5 rounded-2xl border border-slate-100 dark:border-slate-700">
+        <div className="mb-8 bg-slate-50 dark:bg-slate-800 p-5 rounded-2xl border border-slate-100 dark:border-slate-700">
           <div className="flex flex-col space-y-1">
             <h2 className="font-bold text-lg text-slate-800 dark:text-slate-100 uppercase tracking-wide">{biller.name}</h2>
             <div className="flex justify-between items-baseline">
@@ -54,7 +74,7 @@ const PinEntry: React.FC<PinEntryProps> = ({ biller, amount, onBack, onNext }) =
         <div className="text-center space-y-8 flex-1">
           <div className="space-y-2">
             <h3 className="text-lg font-bold text-slate-700 dark:text-slate-200">Enter Your PIN</h3>
-            <p className="text-sm text-slate-500">Securely confirm your payment</p>
+            <p className="text-sm text-slate-500">Securely authorize your payment</p>
           </div>
 
           <div className="flex justify-center space-x-6 py-4">
@@ -70,7 +90,7 @@ const PinEntry: React.FC<PinEntryProps> = ({ biller, amount, onBack, onNext }) =
             ))}
           </div>
 
-          <div className="grid grid-cols-3 gap-y-4 gap-x-8 max-w-[280px] mx-auto mt-12">
+          <div className="grid grid-cols-3 gap-y-4 gap-x-8 max-w-[280px] mx-auto mt-4">
             {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(n => (
               <button 
                 key={n}
@@ -97,15 +117,41 @@ const PinEntry: React.FC<PinEntryProps> = ({ biller, amount, onBack, onNext }) =
         </div>
 
         <div className="mt-auto pt-8">
-          <button 
-            onClick={handleConfirm}
-            disabled={pin.length < MAX_PIN}
-            className="w-full bg-primary disabled:opacity-50 text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-pink-200 dark:shadow-none flex items-center justify-center space-x-2 active:scale-[0.98] transition-all"
-          >
-            <span>Confirm Payment</span>
-            <span className="material-icons-round">arrow_forward</span>
-          </button>
-          <p className="text-center text-xs text-slate-400 mt-4 px-6">By confirming, you agree to our Terms & Conditions for utility payments.</p>
+          <div className="flex flex-col items-center">
+            <div 
+              onMouseDown={() => isPinComplete && setIsHolding(true)}
+              onMouseUp={() => setIsHolding(false)}
+              onMouseLeave={() => setIsHolding(false)}
+              onTouchStart={() => isPinComplete && setIsHolding(true)}
+              onTouchEnd={() => setIsHolding(false)}
+              className={`relative w-full max-w-sm h-16 rounded-full overflow-hidden flex items-center justify-center shadow-lg transition-all ${
+                isPinComplete 
+                  ? 'bg-primary/20 dark:bg-primary/10 cursor-pointer active:scale-95' 
+                  : 'bg-slate-100 dark:bg-slate-800 opacity-50 cursor-not-allowed shadow-none'
+              }`}
+            >
+              {isPinComplete && (
+                <div 
+                  className="absolute left-0 top-0 bottom-0 bg-primary transition-all duration-75 ease-linear" 
+                  style={{ width: `${progress}%` }} 
+                />
+              )}
+              <div className="relative flex items-center space-x-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                  !isPinComplete ? 'bg-slate-300 dark:bg-slate-700 text-slate-500' :
+                  progress > 50 ? 'bg-white text-primary' : 'bg-primary text-white'
+                }`}>
+                  <span className="material-symbols-outlined text-2xl material-symbols-filled">fingerprint</span>
+                </div>
+                <span className={`font-bold text-base transition-colors ${
+                  !isPinComplete ? 'text-slate-400 dark:text-slate-500' :
+                  progress > 50 ? 'text-white' : 'text-primary'
+                }`}>
+                  {progress >= 100 ? 'Success' : 'Tap and hold to confirm'}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
     </div>

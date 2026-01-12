@@ -1,12 +1,12 @@
 
 export enum Screen {
   HOME = 'HOME',
-  BILL_SELECT = 'BILL_SELECT',
   CUSTOMER_DETAILS = 'CUSTOMER_DETAILS',
   AMOUNT_ENTRY = 'AMOUNT_ENTRY',
   PIN_ENTRY = 'PIN_ENTRY',
-  SUMMARY = 'SUMMARY',
+  SUMMARY = 'SUMMARY', // Review details screen
   SUCCESS = 'SUCCESS',
+  LOADING = 'LOADING',
 }
 
 export interface Biller {
