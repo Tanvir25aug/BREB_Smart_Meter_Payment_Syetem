@@ -1,0 +1,5 @@
+{
+  "name": "BREB Smart Meter Payment",
+  "description": "A feature-rich mobile financial services application for utility bill payments with a secure PIN entry and transaction management.",
+  "requestFramePermissions": []
+}
